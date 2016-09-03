@@ -20,7 +20,7 @@ namespace NpgSqlUtils
         public DataTable Query(
             string query, 
             IDictionary<string, object> scalarParams = null, 
-            IDictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> tableParams = null)
+            IDictionary<string, NpgTableParameter> tableParams = null)
         {
             DataTable result;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
@@ -30,32 +30,20 @@ namespace NpgSqlUtils
                 if (scalarParams != null)
                 {
                     foreach (var scalarParam in scalarParams)
-                    {
                         cmd.Parameters.AddWithValue(scalarParam.Key, scalarParam.Value);
-                    }
                 }
 
                 if (tableParams != null)
                 {
                     foreach (var tableParam in tableParams)
-                    {
-                        cmd.Parameters.Add(tableParam.Key, NpgsqlTypes.NpgsqlDbType.Array | tableParam.Value.Key)
-                            .Value = tableParam.Value.Value;
-                    }
+                        cmd.Parameters.Add(tableParam.Key,
+                            NpgsqlTypes.NpgsqlDbType.Array | tableParam.Value.Type).Value = tableParam.Value.Rows;
                 }
                 
                 using (var reader = cmd.ExecuteReader())
                 {
                     result = new DataTable();
-                    for(int i = 0; i < reader.FieldCount; i++)
-                    {
-                        result.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
-                    }
-
-                    while (reader.Read())
-                    {
-                        result.Rows.Add(Enumerable.Range(0, reader.FieldCount).Select(i => reader.GetValue(i)).ToArray());
-                    }
+                    result.Load(reader);
                 }
             }
 
@@ -67,7 +55,7 @@ namespace NpgSqlUtils
             _connection.Dispose();
         }
 
-        public INpgSqlDataContext Map<T>(string name) where T : new()
+        public INpgSqlDataContext MapComposite<T>(string name) where T : new()
         {
             _connection.MapComposite<T>(name);
             return this;

@@ -28,49 +28,49 @@ namespace ConsoleApplication1
                 PrintTable(r2);
 
                 // using table valued parameters
-                // PG doesn't have tvp - they are mimicked by arrays of regular or Composite types
+                // Postgres doesn't have tvp - they are mimicked by arrays of regular or Composite types
                 var r3 = dc.Query(@"select c.* from customers c inner join unnest(@ageval_tvp) tvp on c.age = tvp",
                     null,
-                    new Dictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> {
+                    new Dictionary<string, NpgTableParameter> {
                         { "ageval_tvp",
-                            new KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>(
-                                NpgsqlTypes.NpgsqlDbType.Integer,
-                                new object[] { 25, 31})
-                        }});
+                            new NpgTableParameter() {
+                                Type = NpgsqlTypes.NpgsqlDbType.Integer,
+                                Rows = new object[] { 25, 31 }
+                            }
+                        }
+                    });
                 PrintTable(r3);
 
-                // table value parameter of composite type
-                // -- CREATE TYPE id_age AS (id integer, age integer)
-                dc.Map<id_age>("id_age");
+                // tvp of composite type
+                dc.MapComposite<id_age>("id_age");
                 var r4 = dc.Query(@"SELECT c.* FROM customers c inner join UNNEST(@x_id_age) x on c.age = x.age and c.id = x.id",
                     null,
-                    new Dictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> {
+                    new Dictionary<string, NpgTableParameter> {
                         { "x_id_age",
-                            new KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>(
-                                NpgsqlTypes.NpgsqlDbType.Composite,
-                                new object[] {
+                            new NpgTableParameter() {
+                                Type = NpgsqlTypes.NpgsqlDbType.Composite,
+                                Rows = new object[] {
                                     new id_age() { id = 1, age = 21 },
                                     new id_age() { id = 3, age = 31 }
-                                })
-                        }});
+                                }
+                            }
+                        }
+                    });
                 PrintTable(r4);
-
             }
             Console.ReadKey();
         }
 
         static void PrintTable(DataTable t)
         {
-            for (var i = 0; i < t.Columns.Count; i++)
-                Console.Write("{0,10}", t.Columns[i].ColumnName);
+            foreach (var c in t.Columns.Cast<DataColumn>().Select(r => r.ColumnName))
+                Console.Write("{0,10}", c);
             Console.WriteLine();
 
-            for (var i = 0; i < t.Rows.Count; i++)
+            foreach (var r in t.Rows.Cast<DataRow>())
             {
-                for (var j = 0; j < t.Rows[i].ItemArray.Length; j++)
-                {
-                    Console.Write("{0,10}", t.Rows[i].ItemArray[j].ToString());
-                }
+                foreach (var c in r.ItemArray)
+                    Console.Write("{0,10}", c.ToString());
                 Console.WriteLine();
             }
             Console.WriteLine("\n");

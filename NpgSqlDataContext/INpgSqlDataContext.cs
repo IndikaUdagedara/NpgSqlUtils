@@ -12,11 +12,11 @@ namespace NpgSqlUtils
         DataTable Query(
             string query, 
             IDictionary<string, object> scalarParams,
-            IDictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> tableParams);
+            IDictionary<string, NpgTableParameter> tableParams);
 
         /// <summary>
         /// fluent interface
         /// </summary>
-        INpgSqlDataContext Map<T>(string name) where T : new();
+        INpgSqlDataContext MapComposite<T>(string name) where T : new();
     }
 }

@@ -17,7 +17,8 @@ namespace NpgSqlUtils
             _connection.Open();
         }
 
-        public DataTable Query(string tag, string query, 
+        public DataTable Query(
+            string query, 
             IDictionary<string, object> scalarParams = null, 
             IDictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> tableParams = null)
         {

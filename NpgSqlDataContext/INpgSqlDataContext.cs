@@ -10,7 +10,6 @@ namespace NpgSqlUtils
     public interface INpgSqlDataContext: IDisposable
     {
         DataTable Query(
-            string tag, 
             string query, 
             IDictionary<string, object> scalarParams,
             IDictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> tableParams);

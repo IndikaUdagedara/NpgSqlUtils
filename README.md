@@ -24,13 +24,23 @@ CREATE TABLE public.customers
 CREATE TYPE id_age AS (id integer, age integer);
 ```
 
+This POCO is mapped to a Postgres type
 ```csharp
-public class User
+class id_age
+{
+	public int id { get; set; }
+	public int age { get; set; }
+}
+```
+
+
+`NpgSqlDataContext` handles connection open and dispose. `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on the params.
+```csharp
 using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
 {
-	var r1 = dc.Query("get_all", @"SELECT * FROM customers");
+	var r1 = dc.Query(@"SELECT * FROM customers");
 
-	var r2 = dc.Query("get_all", @"SELECT * FROM customers WHERE age=@ageval",
+	var r2 = dc.Query(@"SELECT * FROM customers WHERE age=@ageval",
 		new Dictionary<string, object> { { "ageval", 25 } });
 
 	// using table valued parameters
@@ -46,7 +56,7 @@ using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password
 
 	// table value parameter of composite type
 	dc.Map<id_age>("id_age");
-	var r4 = dc.Query("get_all", @"SELECT c.* FROM customers c INNER JOIN UNNEST(@x_id_age) x ON c.age = x.age AND c.id = x.id",
+	var r4 = dc.Query(@"SELECT c.* FROM customers c INNER JOIN UNNEST(@x_id_age) x ON c.age = x.age AND c.id = x.id",
 		null,
 		new Dictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> {
 			{ "x_id_age",
@@ -59,3 +69,6 @@ using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password
 			}});
 }
 ```
+
+##TODO
+- Implement `IDbCommand.ExecuteNonQuery` counterpart (for `INSERT, UPDATE, DELETE`)

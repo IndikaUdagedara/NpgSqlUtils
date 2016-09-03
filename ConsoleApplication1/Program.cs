@@ -20,16 +20,16 @@ namespace ConsoleApplication1
         {
             using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
             {
-                var r1 = dc.Query("get_all", @"select * from customers");
+                var r1 = dc.Query(@"select * from customers");
                 PrintTable(r1);
 
-                var r2 = dc.Query("get_all", @"select * from customers where age=@ageval",
+                var r2 = dc.Query(@"select * from customers where age=@ageval",
                     new Dictionary<string, object> { { "ageval", 25 } });
                 PrintTable(r2);
 
                 // using table valued parameters
                 // PG doesn't have tvp - they are mimicked by arrays of regular or Composite types
-                var r3 = dc.Query("get_all", @"select c.* from customers c inner join unnest(@ageval_tvp) tvp on c.age = tvp",
+                var r3 = dc.Query(@"select c.* from customers c inner join unnest(@ageval_tvp) tvp on c.age = tvp",
                     null,
                     new Dictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> {
                         { "ageval_tvp",
@@ -42,7 +42,7 @@ namespace ConsoleApplication1
                 // table value parameter of composite type
                 // -- CREATE TYPE id_age AS (id integer, age integer)
                 dc.Map<id_age>("id_age");
-                var r4 = dc.Query("get_all", @"SELECT c.* FROM customers c inner join UNNEST(@x_id_age) x on c.age = x.age and c.id = x.id",
+                var r4 = dc.Query(@"SELECT c.* FROM customers c inner join UNNEST(@x_id_age) x on c.age = x.age and c.id = x.id",
                     null,
                     new Dictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> {
                         { "x_id_age",

@@ -1,6 +1,6 @@
 # NpgSqlUtils
 
-## Some utils for NpgSql (http://www.npgsql.org/doc/index.html)
+## Some utils for [NpgSql](http://www.npgsql.org/doc/index.html)
 
 - Simple wrapper to run inline sql without setting up connections, commands, parameters etc. and use scalar and table-valued parameters. 
 - `NpgSqlDataContext` is a wrapper for `NpgSqlConnection` and handles connection open and dispose. 

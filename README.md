@@ -45,10 +45,10 @@ using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password
 
 	// using table valued parameters
 	// PG doesn't have tvp - they are mimicked by arrays of regular or Composite types
-	var r3 = dc.Query("get_all", @"SELECT c.* FROM customers c INNER JOIN UNNEST(@ageval_tvp) tvp ON c.age = tvp",
+	var r3 = dc.Query("get_all", @"SELECT c.* FROM customers c INNER JOIN UNNEST(@ages) age ON c.age = age",
 		null,
 		new Dictionary<string, KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>> {
-			{ "ageval_tvp",
+			{ "ages",
 				new KeyValuePair<NpgsqlTypes.NpgsqlDbType, object[]>(
 					NpgsqlTypes.NpgsqlDbType.Integer,
 					new object[] { 25, 31 })

@@ -1,9 +1,11 @@
 # NpgSqlUtils
 
-## Some utils for NpgSql
+## Some utils for NpgSql (http://www.npgsql.org/doc/index.html)
 
 - Simple wrapper to run inline sql without setting up connections, commands, parameters etc. and use scalar and table-valued parameters. 
-- Postgres doesn't have tvp - they are mimicked by arrays of regular or Composite types
+- `NpgSqlDataContext` is a wrapper for `NpgSqlConnection` and handles connection open and dispose. 
+- `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on params (scaler, table).
+- `NpgSqlDataContext.NonQuery()` is its counterpart for `IDbCommand.ExecuteNonQuery` (for `INSERT, UPDATE, DELETE`)
 - See the sample program for usage
 
 **NOT a complete project at all - use with care.**
@@ -12,6 +14,7 @@
 
 ##Examples
 
+Assume we have a `customers` table
 ```
 CREATE TABLE public.customers
 (
@@ -20,59 +23,94 @@ CREATE TABLE public.customers
   age integer,
   CONSTRAINT customers_pkey PRIMARY KEY (id)
 );
-
-CREATE TYPE id_age AS (id integer, age integer);
 ```
 
-This POCO is mapped to a Postgres type
+And this Postgres type
+```
+CREATE TYPE age_name AS (age integer, name varchar);
+```
+
+which maps to
+
 ```csharp
-class id_age
+class age_name
 {
-	public int id { get; set; }
 	public int age { get; set; }
+	public string name { get; set; }
 }
 ```
 
 
-`NpgSqlDataContext` handles connection open and dispose. `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on the params.
+Basic usage:
 ```csharp
 using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
 {
-	var r1 = dc.Query(@"select * from customers");
-
-	var r2 = dc.Query(@"select * from customers where age=@ageval",
-		new Dictionary<string, object> { { "ageval", 25 } });
-
-	// using table valued parameters
-	// Postgres doesn't have tvp - they are mimicked by arrays of regular or Composite types
-	var r3 = dc.Query(@"select c.* from customers c inner join unnest(@ageval_tvp) tvp on c.age = tvp",
-		null,
-		new Dictionary<string, NpgTableParameter> {
-			{ "ageval_tvp",
-				new NpgTableParameter() {
-					Type = NpgsqlTypes.NpgsqlDbType.Integer,
-					Rows = new object[] { 25, 31 }
-				}
-			}
-		});
-
-	// tvp of composite type
-	dc.MapComposite<id_age>("id_age");
-	var r4 = dc.Query(@"SELECT c.* FROM customers c inner join UNNEST(@x_id_age) x on c.age = x.age and c.id = x.id",
-		null,
-		new Dictionary<string, NpgTableParameter> {
-			{ "x_id_age",
-				new NpgTableParameter() {
-					Type = NpgsqlTypes.NpgsqlDbType.Composite,
-					Rows = new object[] {
-						new id_age() { id = 1, age = 21 },
-						new id_age() { id = 3, age = 31 }
-					}
-				}
-			}
-		});
+	DataTable result = dc.Query(@"SELECT ....");
+	int rowsAffected = dc.NonQuery(@"INSERT/UPDATE/DELETE ....");
 }
 ```
 
-##TODO
-- Implement `IDbCommand.ExecuteNonQuery` counterpart (for `INSERT, UPDATE, DELETE`)
+Query with scalar parameter
+```
+var r = dc.Query(@"select * from customers where age=@ageval",
+	new Dictionary<string, object> { { "ageval", 25 } });
+```
+
+
+Query with table parameter (`NpgTableParameter` is a new type introduced here). Parameter is a regular (non-composite) type
+```
+var r = dc.Query(@"SELECT c.* 
+                    FROM customers c 
+                    INNER JOIN UNNEST(@ageval_tvp) tvp ON 
+                        c.age = tvp",
+    null,
+    new Dictionary<string, NpgTableParameter> {
+        { "ageval_tvp",
+            new NpgTableParameter() {
+                Type = NpgsqlTypes.NpgsqlDbType.Integer,
+                Rows = new object[] { 25, 31 }
+            }
+        }
+    });
+```
+
+Query with table parameter of composite type (Note the `MapComposite` call which tells `NpgSql` about the mapping)
+```
+dc.MapComposite<age_name>("age_name");
+var r4 = dc.Query(@"SELECT c.* 
+					FROM customers c 
+					INNER JOIN UNNEST(@x_age_name) x ON 
+						c.age = x.age AND 
+						c.name = x.name",
+	null,
+	new Dictionary<string, NpgTableParameter> {
+		{ "x_age_name",
+			new NpgTableParameter() {
+				Type = NpgsqlTypes.NpgsqlDbType.Composite,
+				Rows = new object[] {
+					new age_name() { name = "Phil", age = 43 },
+					new age_name() { name = "Barry", age = 39 }
+				}
+			}
+		}
+	});
+```
+
+Insert with table parameter of composite type (To perform a batch operation)
+```
+dc.MapComposite<age_name>("age_name");
+var r = dc.NonQuery(@"INSERT INTO customers (age, name) 
+					   SELECT age, name from UNNEST(@x_age_name)",
+	null,
+	new Dictionary<string, NpgTableParameter> {
+		{ "x_age_name",
+			new NpgTableParameter() {
+				Type = NpgsqlTypes.NpgsqlDbType.Composite,
+				Rows = new object[] {
+					new age_name() { name = "Phil", age = 43 },
+					new age_name() { name = "Barry", age = 39 }
+				}
+			}
+		}
+	});
+```

@@ -14,6 +14,11 @@ namespace NpgSqlUtils
             IDictionary<string, object> scalarParams,
             IDictionary<string, NpgTableParameter> tableParams);
 
+        int NonQuery(
+            string query,
+            IDictionary<string, object> scalarParams,
+            IDictionary<string, NpgTableParameter> tableParams);
+
         /// <summary>
         /// fluent interface
         /// </summary>

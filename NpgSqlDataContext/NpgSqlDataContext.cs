@@ -50,6 +50,36 @@ namespace NpgSqlUtils
             return result;
         }
 
+
+        public int NonQuery(
+            string query,
+            IDictionary<string, object> scalarParams = null,
+            IDictionary<string, NpgTableParameter> tableParams = null)
+        {
+            int result = -1;
+            using (NpgsqlCommand cmd = new NpgsqlCommand())
+            {
+                cmd.Connection = _connection;
+                cmd.CommandText = query;
+                if (scalarParams != null)
+                {
+                    foreach (var scalarParam in scalarParams)
+                        cmd.Parameters.AddWithValue(scalarParam.Key, scalarParam.Value);
+                }
+
+                if (tableParams != null)
+                {
+                    foreach (var tableParam in tableParams)
+                        cmd.Parameters.Add(tableParam.Key,
+                            NpgsqlTypes.NpgsqlDbType.Array | tableParam.Value.Type).Value = tableParam.Value.Rows;
+                }
+
+                result = cmd.ExecuteNonQuery();
+            }
+
+            return result;
+        }
+
         public void Dispose()
         {
             _connection.Dispose();

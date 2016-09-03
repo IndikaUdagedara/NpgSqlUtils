@@ -6,11 +6,11 @@
 - Postgres doesn't have tvp - they are mimicked by arrays of regular or Composite types
 - See the sample program for usage
 
-NOT a complete project at all - use with care. You've been warned.
+**NOT a complete project at all - use with care.**
 
 
 
-Example:
+##Examples
 
 ```
 CREATE TABLE public.customers

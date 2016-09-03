@@ -36,14 +36,14 @@ CREATE TYPE age_name AS (age integer, name varchar);
 ```
 
 
-Query with scalar parameter
+- Query with scalar parameter
 ```csharp
 var r = dc.Query(@"select * from customers where age=@ageval",
 	new Dictionary<string, object> { { "ageval", 25 } });
 ```
 
 
-Query with table parameter (`NpgTableParameter` is a new type introduced here). Parameter is a regular (non-composite) type
+- Query with table parameter (`NpgTableParameter` is a new type introduced here). Parameter is a regular (non-composite) type
 ```csharp
 var r = dc.Query(@"SELECT c.* 
                     FROM customers c 
@@ -60,7 +60,7 @@ var r = dc.Query(@"SELECT c.*
     });
 ```
 
-Query with table parameter of composite type (Note calling `MapComposite()` tells `NpgSql` about the mapping)
+- Query with table parameter of composite type (Note calling `MapComposite()` tells `NpgSql` about the mapping)
 ```csharp
 class age_name
 {
@@ -90,7 +90,7 @@ var r4 = dc.Query(@"SELECT c.*
 	});
 ```
 
-Insert with table parameter of composite type (To perform a batch operation)
+- Insert with table parameter of composite type (To perform a batch operation)
 ```csharp
 dc.MapComposite<age_name>("age_name");
 var r = dc.NonQuery(@"INSERT INTO customers (age, name) 

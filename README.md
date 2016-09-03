@@ -1,6 +1,6 @@
-# npgsqlutils
+# NpgSqlUtils
 
-## Some utils for Npgsql
+## Some utils for NpgSql
 
 - Simple wrapper to run inline sql without setting up connections, commands, parameters etc. and use scalar and table-valued parameters. 
 - Postgres doesn't have tvp - they are mimicked by arrays of regular or Composite types

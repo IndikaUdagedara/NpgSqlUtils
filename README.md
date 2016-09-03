@@ -6,7 +6,15 @@
 - `NpgSqlDataContext` is a wrapper for `NpgSqlConnection` and handles connection open and dispose. 
 - `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on params (scaler, table).
 - `NpgSqlDataContext.NonQuery()` is its counterpart for `IDbCommand.ExecuteNonQuery` (for `INSERT, UPDATE, DELETE`)
-- See the sample program for usage
+
+Basic usage is
+```csharp
+using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
+{
+	DataTable result = dc.Query(@"SELECT ....");
+	int rowsAffected = dc.NonQuery(@"INSERT/UPDATE/DELETE ....");
+}
+```
 
 **NOT a complete project at all - use with care.**
 
@@ -41,14 +49,6 @@ class age_name
 ```
 
 
-Basic usage:
-```csharp
-using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
-{
-	DataTable result = dc.Query(@"SELECT ....");
-	int rowsAffected = dc.NonQuery(@"INSERT/UPDATE/DELETE ....");
-}
-```
 
 Query with scalar parameter
 ```
@@ -74,7 +74,7 @@ var r = dc.Query(@"SELECT c.*
     });
 ```
 
-Query with table parameter of composite type (Note the `MapComposite` call which tells `NpgSql` about the mapping)
+Query with table parameter of composite type (Note calling `MapComposite()` tells `NpgSql` about the mapping)
 ```
 dc.MapComposite<age_name>("age_name");
 var r4 = dc.Query(@"SELECT c.* 

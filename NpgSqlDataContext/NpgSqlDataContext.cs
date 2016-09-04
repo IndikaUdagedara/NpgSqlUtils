@@ -19,25 +19,19 @@ namespace NpgSqlUtils
 
         public DataTable Query(
             string query, 
-            IDictionary<string, object> scalarParams = null, 
-            IDictionary<string, NpgTableParameter> tableParams = null)
+            IEnumerable<INpgSqlParameter> parameters = null)
         {
             DataTable result;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
                 cmd.Connection = _connection;
                 cmd.CommandText = query;
-                if (scalarParams != null)
+                if (parameters != null)
                 {
-                    foreach (var scalarParam in scalarParams)
-                        cmd.Parameters.AddWithValue(scalarParam.Key, scalarParam.Value);
-                }
-
-                if (tableParams != null)
-                {
-                    foreach (var tableParam in tableParams)
-                        cmd.Parameters.Add(tableParam.Key,
-                            NpgsqlTypes.NpgsqlDbType.Array | tableParam.Value.Type).Value = tableParam.Value.Rows;
+                    foreach (var p in parameters)
+                    {
+                        cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
+                    }
                 }
                 
                 using (var reader = cmd.ExecuteReader())
@@ -51,27 +45,21 @@ namespace NpgSqlUtils
         }
 
 
-        public int NonQuery(
+        public int Execute(
             string query,
-            IDictionary<string, object> scalarParams = null,
-            IDictionary<string, NpgTableParameter> tableParams = null)
+            IEnumerable<INpgSqlParameter> parameters = null)
         {
             int result = -1;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
                 cmd.Connection = _connection;
                 cmd.CommandText = query;
-                if (scalarParams != null)
+                if (parameters != null)
                 {
-                    foreach (var scalarParam in scalarParams)
-                        cmd.Parameters.AddWithValue(scalarParam.Key, scalarParam.Value);
-                }
-
-                if (tableParams != null)
-                {
-                    foreach (var tableParam in tableParams)
-                        cmd.Parameters.Add(tableParam.Key,
-                            NpgsqlTypes.NpgsqlDbType.Array | tableParam.Value.Type).Value = tableParam.Value.Rows;
+                    foreach (var p in parameters)
+                    {
+                        cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
+                    }
                 }
 
                 result = cmd.ExecuteNonQuery();

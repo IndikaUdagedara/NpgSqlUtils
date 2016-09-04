@@ -11,13 +11,11 @@ namespace NpgSqlUtils
     {
         DataTable Query(
             string query, 
-            IDictionary<string, object> scalarParams,
-            IDictionary<string, NpgTableParameter> tableParams);
+            IEnumerable<INpgSqlParameter> parameters);
 
-        int NonQuery(
+        int Execute(
             string query,
-            IDictionary<string, object> scalarParams,
-            IDictionary<string, NpgTableParameter> tableParams);
+            IEnumerable<INpgSqlParameter> parameters);
 
         /// <summary>
         /// fluent interface

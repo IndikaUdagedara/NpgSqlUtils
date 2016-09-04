@@ -4,15 +4,15 @@
 
 - Simple wrapper to run inline SQL without setting up connections, commands, parameters etc. and use scalar and table-valued parameters (Postgres doesn't have table-valued parameters. They are mimicked with arrays of regular/composite types). 
 - `NpgSqlDataContext` is a wrapper for `NpgSqlConnection` and handles connection open and dispose. 
-- `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on params (scaler, table).
-- `NpgSqlDataContext.NonQuery()` is its counterpart for `IDbCommand.ExecuteNonQuery` (for `INSERT, UPDATE, DELETE`)
+- `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on params, executes and returns a result table.
+- `NpgSqlDataContext.Execute()` is its counterpart for `IDbCommand.ExecuteNonQuery` (for `INSERT, UPDATE, DELETE`).
 
 Basic usage is
 ```csharp
 using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
 {
 	DataTable result = dc.Query(@"SELECT ....");
-	int rowsAffected = dc.NonQuery(@"INSERT/UPDATE/DELETE ....");
+	int rowsAffected = dc.Execute(@"INSERT/UPDATE/DELETE ....");
 }
 ```
 
@@ -38,26 +38,23 @@ CREATE TYPE age_name AS (age integer, name varchar);
 
 - Query with scalar parameter
 ```csharp
-var r = dc.Query(@"select * from customers where age=@ageval",
-	new Dictionary<string, object> { { "ageval", 25 } });
+var r = dc.Query(@"SELECT * FROM customers WHERE age=@ageval",
+	new List<INpgSqlParameter> { new NpgScalarParameter("ageval", NpgsqlDbType.Integer, 25) });
 ```
 
 
 - Query with table parameter (`NpgTableParameter` is a new type introduced here). Parameter is a regular (non-composite) type
 ```csharp
 var r = dc.Query(@"SELECT c.* 
-                    FROM customers c 
-                    INNER JOIN UNNEST(@ageval_tvp) tvp ON 
-                        c.age = tvp",
-    null,
-    new Dictionary<string, NpgTableParameter> {
-        { "ageval_tvp",
-            new NpgTableParameter() {
-                Type = NpgsqlTypes.NpgsqlDbType.Integer,
-                Rows = new object[] { 25, 31 }
-            }
-        }
-    });
+					FROM customers c 
+					INNER JOIN UNNEST(@ageval_tvp) tvp ON 
+						c.age = tvp",
+					new List<INpgSqlParameter> {
+						new NpgTableParameter(
+							"ageval_tvp", 
+							NpgsqlDbType.Integer,
+							new object[] { 25, 31, 39 })
+					});
 ```
 
 - Query with table parameter of composite type (Note calling `MapComposite()` tells `NpgSql` about the mapping)
@@ -71,40 +68,36 @@ class age_name
 
 ```csharp
 dc.MapComposite<age_name>("age_name");
-var r4 = dc.Query(@"SELECT c.* 
+var r = dc.Query(@"SELECT c.* 
 					FROM customers c 
 					INNER JOIN UNNEST(@x_age_name) x ON 
 						c.age = x.age AND 
 						c.name = x.name",
-	null,
-	new Dictionary<string, NpgTableParameter> {
-		{ "x_age_name",
-			new NpgTableParameter() {
-				Type = NpgsqlTypes.NpgsqlDbType.Composite,
-				Rows = new object[] {
-					new age_name() { name = "Phil", age = 43 },
-					new age_name() { name = "Barry", age = 39 }
-				}
-			}
-		}
-	});
+					new List<INpgSqlParameter> {
+						new NpgTableParameter(
+							"x_age_name",
+							NpgsqlDbType.Composite,
+							new object[] {
+								new age_name() { name = "Phil", age = 43 },
+								new age_name() { name = "Barry", age = 39 }
+							}
+						)
+					});
 ```
 
 - Insert with table parameter of composite type (To perform a batch operation)
 ```csharp
 dc.MapComposite<age_name>("age_name");
-var r = dc.NonQuery(@"INSERT INTO customers (age, name) 
+var r = dc.Execute(@"INSERT INTO customers (age, name) 
 					   SELECT age, name from UNNEST(@x_age_name)",
-	null,
-	new Dictionary<string, NpgTableParameter> {
-		{ "x_age_name",
-			new NpgTableParameter() {
-				Type = NpgsqlTypes.NpgsqlDbType.Composite,
-				Rows = new object[] {
-					new age_name() { name = "Phil", age = 43 },
-					new age_name() { name = "Barry", age = 39 }
-				}
-			}
-		}
-	});
+						new List<INpgSqlParameter> {
+							new NpgTableParameter(
+								"x_age_name",
+								NpgsqlDbType.Composite,
+								new object[] {
+										new age_name() { name = "Phil", age = 43 },
+										new age_name() { name = "Barry", age = 39 }
+								}
+							)
+						});
 ```

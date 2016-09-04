@@ -46,7 +46,7 @@
   <ItemGroup>
     <Compile Include="NpgSqlDataContext.cs" />
     <Compile Include="INpgSqlDataContext.cs" />
-    <Compile Include="NpgTableParameter.cs" />
+    <Compile Include="NpgSqlParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

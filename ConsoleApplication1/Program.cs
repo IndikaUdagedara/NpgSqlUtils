@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Npgsql;
+using NpgsqlTypes;
 using System.Data;
 using NpgSqlUtils;
 
@@ -25,7 +26,7 @@ namespace ConsoleApplication1
                 PrintTable(r1);
 
                 var r2 = dc.Query(@"SELECT * FROM customers WHERE age=@ageval",
-                    new Dictionary<string, object> { { "ageval", 25 } });
+                    new List<INpgSqlParameter> { new NpgScalarParameter("ageval", NpgsqlDbType.Integer, 25) });
                 PrintTable(r2);
 
                 // using table valued parameters
@@ -34,14 +35,11 @@ namespace ConsoleApplication1
                                     FROM customers c 
                                     INNER JOIN UNNEST(@ageval_tvp) tvp ON 
                                         c.age = tvp",
-                    null,
-                    new Dictionary<string, NpgTableParameter> {
-                        { "ageval_tvp",
-                            new NpgTableParameter() {
-                                Type = NpgsqlTypes.NpgsqlDbType.Integer,
-                                Rows = new object[] { 25, 31 }
-                            }
-                        }
+                    new List<INpgSqlParameter> {
+                        new NpgTableParameter(
+                            "ageval_tvp", 
+                            NpgsqlDbType.Integer,
+                            new object[] { 25, 31, 39 })
                     });
                 PrintTable(r3);
 
@@ -52,41 +50,37 @@ namespace ConsoleApplication1
                                     INNER JOIN UNNEST(@x_age_name) x ON 
                                         c.age = x.age AND 
                                         c.name = x.name",
-                    null,
-                    new Dictionary<string, NpgTableParameter> {
-                        { "x_age_name",
-                            new NpgTableParameter() {
-                                Type = NpgsqlTypes.NpgsqlDbType.Composite,
-                                Rows = new object[] {
-                                    new age_name() { name = "Phil", age = 43 },
-                                    new age_name() { name = "Barry", age = 39 }
-                                }
+                    new List<INpgSqlParameter> {
+                        new NpgTableParameter(
+                            "x_age_name",
+                            NpgsqlDbType.Composite,
+                            new object[] {
+                                new age_name() { name = "Phil", age = 43 },
+                                new age_name() { name = "Barry", age = 39 }
                             }
-                        }
+                        )
                     });
                 PrintTable(r4);
 
-                var r5 = dc.NonQuery(@"INSERT INTO customers (age, name) values (@age, @name)",
-                    new Dictionary<string, object> {
-                        { "age", 39 },
-                        { "name", "Sam" },
-                    }, null);
+                var r5 = dc.Execute(@"INSERT INTO customers (age, name) values (@age, @name)",
+                    new List<INpgSqlParameter> {
+                        new NpgScalarParameter("age", NpgsqlDbType.Integer, 25),
+                        new NpgScalarParameter("name", NpgsqlDbType.Varchar, "Sam"),
+                    });
                 Console.WriteLine("Inserted {0} rows", r5);
 
                 dc.MapComposite<age_name>("age_name");
-                var r6 = dc.NonQuery(@"INSERT INTO customers (age, name) 
+                var r6 = dc.Execute(@"INSERT INTO customers (age, name) 
                                        SELECT age, name from UNNEST(@x_age_name)",
-                    null,
-                    new Dictionary<string, NpgTableParameter> {
-                        { "x_age_name",
-                            new NpgTableParameter() {
-                                Type = NpgsqlTypes.NpgsqlDbType.Composite,
-                                Rows = new object[] {
+                    new List<INpgSqlParameter> {
+                        new NpgTableParameter(
+                            "x_age_name",
+                            NpgsqlDbType.Composite,
+                            new object[] {
                                     new age_name() { name = "Phil", age = 43 },
                                     new age_name() { name = "Barry", age = 39 }
-                                }
                             }
-                        }
+                        )
                     });
                 Console.WriteLine("Inserted {0} rows", r6);
             }

@@ -9,13 +9,8 @@ namespace NpgSqlUtils
 {
     public interface INpgSqlDataContext: IDisposable
     {
-        DataTable Query(
-            string query, 
-            IEnumerable<INpgSqlParameter> parameters);
-
-        int Execute(
-            string query,
-            IEnumerable<INpgSqlParameter> parameters);
+        DataTable Query(string query, params INpgSqlParameter[] parameters);
+        int Execute(string query, params INpgSqlParameter[] parameters);
 
         /// <summary>
         /// fluent interface

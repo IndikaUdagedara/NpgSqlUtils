@@ -17,21 +17,16 @@ namespace NpgSqlUtils
             _connection.Open();
         }
 
-        public DataTable Query(
-            string query, 
-            IEnumerable<INpgSqlParameter> parameters = null)
+        public DataTable Query(string query, params INpgSqlParameter[] parameters)
         {
             DataTable result;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
                 cmd.Connection = _connection;
                 cmd.CommandText = query;
-                if (parameters != null)
+                foreach (var p in parameters)
                 {
-                    foreach (var p in parameters)
-                    {
-                        cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
-                    }
+                    cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
                 }
                 
                 using (var reader = cmd.ExecuteReader())
@@ -45,21 +40,16 @@ namespace NpgSqlUtils
         }
 
 
-        public int Execute(
-            string query,
-            IEnumerable<INpgSqlParameter> parameters = null)
+        public int Execute(string query, params INpgSqlParameter[] parameters)
         {
             int result = -1;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
                 cmd.Connection = _connection;
                 cmd.CommandText = query;
-                if (parameters != null)
+                foreach (var p in parameters)
                 {
-                    foreach (var p in parameters)
-                    {
-                        cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
-                    }
+                    cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
                 }
 
                 result = cmd.ExecuteNonQuery();

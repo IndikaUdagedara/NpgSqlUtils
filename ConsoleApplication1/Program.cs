@@ -10,10 +10,18 @@ using NpgSqlUtils;
 
 namespace ConsoleApplication1
 {
-    class age_name
+    class customer
     {
+        public long customer_id { get; set; }
         public int age { get; set; }
         public string name { get; set; }
+    }
+
+    class order
+    {
+        public int order_id { get;  set;}
+        public int customer_id { get; set; }
+        public string item { get; set; }
     }
 
     class Program
@@ -22,67 +30,75 @@ namespace ConsoleApplication1
         {
             using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
             {
-                var r1 = dc.Query(@"SELECT * FROM customers");
-                PrintTable(r1);
+                var r0 = dc.Query(@"SELECT * FROM orders");
+                PrintTable(r0);
 
-                var r2 = dc.Query(@"SELECT * FROM customers WHERE age=@ageval",
-                    new List<INpgSqlParameter> { new NpgScalarParameter("ageval", NpgsqlDbType.Integer, 25) });
-                PrintTable(r2);
+                var r1 = dc.Query(@"SELECT * FROM orders where customer_id=@customer_id", 
+                    new NpgScalarParameter("customer_id", NpgsqlDbType.Integer, 23));
+                PrintTable(r1);
 
                 // using table valued parameters
                 // Postgres doesn't have tvp - they are mimicked by arrays of regular or Composite types
-                var r3 = dc.Query(@"SELECT c.* 
-                                    FROM customers c 
-                                    INNER JOIN UNNEST(@ageval_tvp) tvp ON 
-                                        c.age = tvp",
-                    new List<INpgSqlParameter> {
+                var r3 = dc.Query(@"
+SELECT c.* 
+FROM customers c 
+INNER JOIN UNNEST(@ageval_tvp) tvp ON 
+    c.age = tvp",
                         new NpgTableParameter(
-                            "ageval_tvp", 
+                            "ageval_tvp",
                             NpgsqlDbType.Integer,
                             new object[] { 25, 31, 39 })
-                    });
+                    );
                 PrintTable(r3);
 
                 // tvp of composite type
-                dc.MapComposite<age_name>("age_name");
-                var r4 = dc.Query(@"SELECT c.* 
-                                    FROM customers c 
-                                    INNER JOIN UNNEST(@x_age_name) x ON 
-                                        c.age = x.age AND 
-                                        c.name = x.name",
-                    new List<INpgSqlParameter> {
+                dc.MapComposite<customer>("customers");
+                var r4 = dc.Query(@"
+SELECT c.* 
+FROM customers c 
+INNER JOIN UNNEST(@x_customer) x ON 
+    c.age = x.age AND 
+    c.name = x.name",
                         new NpgTableParameter(
-                            "x_age_name",
+                            "x_customer",
                             NpgsqlDbType.Composite,
                             new object[] {
-                                new age_name() { name = "Phil", age = 43 },
-                                new age_name() { name = "Barry", age = 39 }
+                                new customer() { name = "Phil", age = 43 },
+                                new customer() { name = "Barry", age = 39 }
                             }
                         )
-                    });
+                    );
                 PrintTable(r4);
 
-                var r5 = dc.Execute(@"INSERT INTO customers (age, name) values (@age, @name)",
-                    new List<INpgSqlParameter> {
-                        new NpgScalarParameter("age", NpgsqlDbType.Integer, 25),
-                        new NpgScalarParameter("name", NpgsqlDbType.Varchar, "Sam"),
-                    });
-                Console.WriteLine("Inserted {0} rows", r5);
-
-                dc.MapComposite<age_name>("age_name");
-                var r6 = dc.Execute(@"INSERT INTO customers (age, name) 
-                                       SELECT age, name from UNNEST(@x_age_name)",
-                    new List<INpgSqlParameter> {
+                dc.MapComposite<order>("orders");
+                var r6 = dc.Query(@"
+INSERT INTO orders (customer_id, item) 
+SELECT customer_id, item from UNNEST(@x_orders) returning order_id",
                         new NpgTableParameter(
-                            "x_age_name",
+                            "x_orders",
                             NpgsqlDbType.Composite,
                             new object[] {
-                                    new age_name() { name = "Phil", age = 43 },
-                                    new age_name() { name = "Barry", age = 39 }
-                            }
-                        )
-                    });
-                Console.WriteLine("Inserted {0} rows", r6);
+                                new order() { customer_id = 22, item = "cc" },
+                                new order() { customer_id = 23, item = "dd" }
+                            })
+                        );
+                PrintTable(r6);
+
+                var r7 = dc.Execute(@"
+WITH customer as (insert into customers(name, age) values ('Ghan', 55) returning customer_id)
+INSERT INTO orders(customer_id, item)
+SELECT c.customer_id, x.item FROM customer c CROSS JOIN UNNEST(@x_orders) x
+",
+                    new NpgTableParameter(
+                        "x_orders",
+                        NpgsqlDbType.Composite,
+                        new object[] {
+                            new order() { item = "gg" },
+                            new order() { item = "hh" }
+                        }
+                    )
+                );
+                Console.WriteLine("Inserted {0} rows", r7);
             }
             Console.ReadKey();
         }

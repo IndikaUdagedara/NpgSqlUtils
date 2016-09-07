@@ -11,24 +11,29 @@ namespace NpgSqlUtils
     public class NpgSqlDataContext : INpgSqlDataContext
     {
         private NpgsqlConnection _connection;
-        public NpgSqlDataContext(string connectionString)
+
+        public INpgsqlNameTranslator Translator { get; }
+
+        public NpgSqlDataContext(string connectionString, INpgsqlNameTranslator translator = null)
         {
+            if (translator == null)
+                translator = new CaseSensitiveTranslator();
+
+            Translator = translator;
+
             _connection = new NpgsqlConnection(connectionString);
             _connection.Open();
         }
 
-        public DataTable Query(string query, params INpgSqlParameter[] parameters)
+        public DataTable Query(string query, params NpgsqlParameter[] parameters)
         {
             DataTable result;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
                 cmd.Connection = _connection;
                 cmd.CommandText = query;
-                foreach (var p in parameters)
-                {
-                    cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
-                }
-                
+                cmd.Parameters.AddRange(parameters);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     result = new DataTable();
@@ -40,18 +45,14 @@ namespace NpgSqlUtils
         }
 
 
-        public int Execute(string query, params INpgSqlParameter[] parameters)
+        public int Execute(string query, params NpgsqlParameter[] parameters)
         {
             int result = -1;
             using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
                 cmd.Connection = _connection;
                 cmd.CommandText = query;
-                foreach (var p in parameters)
-                {
-                    cmd.Parameters.Add(p.Name, p.Type).Value = p.Value;
-                }
-
+                cmd.Parameters.AddRange(parameters);
                 result = cmd.ExecuteNonQuery();
             }
 
@@ -65,7 +66,7 @@ namespace NpgSqlUtils
 
         public INpgSqlDataContext MapComposite<T>(string name) where T : new()
         {
-            _connection.MapComposite<T>(name);
+            _connection.MapComposite<T>(name, Translator);
             return this;
         }
     }

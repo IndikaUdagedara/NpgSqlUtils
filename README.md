@@ -1,15 +1,17 @@
 # NpgSqlUtils
 
-## Some utils for [NpgSql](http://www.npgsql.org/doc/index.html)
+## Some utils and sample code for [NpgSql](http://www.npgsql.org/doc/index.html)
 
-- Simple wrapper to run inline SQL without setting up connections, commands, parameters etc. and use scalar and table-valued parameters (Postgres doesn't have table-valued parameters. They are mimicked with arrays of regular/composite types). 
+- Simple wrapper to run inline SQL without setting up connections, commands, parameters etc. and use scalar and table-valued parameters
 - `NpgSqlDataContext` is a wrapper for `NpgSqlConnection` and handles connection open and dispose. 
 - `NpgSqlDataContext.Query()` wraps `IDbCommand.ExecuteQuery` and does command creation based on params, executes and returns a result table.
 - `NpgSqlDataContext.Execute()` is its counterpart for `IDbCommand.ExecuteNonQuery` (for `INSERT, UPDATE, DELETE`).
 
 Basic usage is
 ```csharp
-using (var dc = new NpgSqlDataContext("Host=localhost;Username=postgres;Password=admin;Database=TEST"))
+using (var dc = new NpgSqlDataContext("connectionString")
+	.MapComposite<T1>("Postgres Type1")
+	.MapComposite<T2>("Postgres Type2"))
 {
 	DataTable result = dc.Query(@"SELECT ....");
 	int rowsAffected = dc.Execute(@"INSERT/UPDATE/DELETE ....");
@@ -63,21 +65,19 @@ class order
 - Query with scalar parameter
 ```csharp
 var r= dc.Query(@"SELECT * FROM orders where customer_id=@customer_id", 
-                    new NpgScalarParameter("customer_id", NpgsqlDbType.Integer, 23));
+                    new NpgsqlParameter("customer_id", 23));
 ```
 
 
-- Query with table parameter (`NpgTableParameter` is a new type introduced here). Parameter is a regular (non-composite) type
+- Query with table parameter (non-composite type)
 ```csharp
 var r = dc.Query(@"
 SELECT c.* 
 FROM customers c 
 INNER JOIN UNNEST(@ageval_tvp) tvp ON 
     c.age = tvp",
-	new NpgTableParameter(
-		"ageval_tvp",
-		NpgsqlDbType.Integer,
-		new object[] { 25, 31, 39 }));
+	new NpgsqlParameter(
+		"ageval_tvp", new int[] { 25, 31, 39 }));
 ```
 
 - Query with table parameter of composite type (calling `MapComposite()` tells `NpgSql` about the mapping)
@@ -89,10 +89,9 @@ FROM customers c
 INNER JOIN UNNEST(@x_customer) x ON 
     c.age = x.age AND 
     c.name = x.name",
-	new NpgTableParameter(
+	new NpgsqlParameter(
 		"x_customer",
-		NpgsqlDbType.Composite,
-		new object[] {
+		new customer[] {
 			new customer() { name = "Phil", age = 43 },
 			new customer() { name = "Barry", age = 39 }
 		}
@@ -105,10 +104,9 @@ dc.MapComposite<order>("orders");
 var r = dc.Query(@"
 INSERT INTO orders (customer_id, item) 
 SELECT customer_id, item from UNNEST(@x_orders) returning order_id",
-	new NpgTableParameter(
+	new NpgsqlParameter(
 		"x_orders",
-		NpgsqlDbType.Composite,
-		new object[] {
+		new order[] {
 			new order() { customer_id = 22, item = "cc" },
 			new order() { customer_id = 23, item = "dd" }
 		}));
@@ -121,10 +119,9 @@ WITH customer as (insert into customers(name, age) values ('Kate', 55) returning
 INSERT INTO orders(customer_id, item)
 SELECT c.customer_id, x.item FROM customer c CROSS JOIN UNNEST(@x_orders) x
 ",
-	new NpgTableParameter(
+	new NpgsqlParameter(
 		"x_orders",
-		NpgsqlDbType.Composite,
-		new object[] {
+		new order[] {
 			new order() { item = "gg" },
 			new order() { item = "hh" }
 		}

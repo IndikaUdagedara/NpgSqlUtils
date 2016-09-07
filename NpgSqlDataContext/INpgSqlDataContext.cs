@@ -4,13 +4,15 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Npgsql;
 
 namespace NpgSqlUtils
 {
     public interface INpgSqlDataContext: IDisposable
     {
-        DataTable Query(string query, params INpgSqlParameter[] parameters);
-        int Execute(string query, params INpgSqlParameter[] parameters);
+        INpgsqlNameTranslator Translator { get; }
+        DataTable Query(string query, params NpgsqlParameter[] parameters);
+        int Execute(string query, params NpgsqlParameter[] parameters);
 
         /// <summary>
         /// fluent interface

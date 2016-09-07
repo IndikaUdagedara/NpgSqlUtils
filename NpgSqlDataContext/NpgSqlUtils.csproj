@@ -44,9 +44,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CaseSensitiveTranslator.cs" />
     <Compile Include="NpgSqlDataContext.cs" />
     <Compile Include="INpgSqlDataContext.cs" />
-    <Compile Include="NpgSqlParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
